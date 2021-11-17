@@ -97,6 +97,7 @@ public class SQLConstants {
     public static final String UM_RESOURCE_ID_COLUMN = "UM_RESOURCE_ID";
     public static final String UM_ASSIGNED_AT_COLUMN = "ASSIGNED_AT";
     public static final String UM_INHERIT_COLUMN = "INHERIT";
+    public static final String PATH_COLUMN = "PATH";
 
     public static final String UM_ID_COLUMN = "UM_ID";
     public static final String ATTR_VALUE_COLUMN = "ATTR_VALUE";
@@ -514,6 +515,61 @@ public class SQLConstants {
             "        '/permission/admin',\n" +
             "        '/permission/admin/manage',\n" +
             "        '/permission/admin/manage/identity', ?, ?)";
+    public static final String GET_LIST_OF_AUTHORIZED_PARENT_ORGANIZATIONS =
+            "WITH FILTERED_PARENT_ORGS AS (\n" +
+                    "    SELECT UNIQUE\n" +
+                    "        URO.INHERIT,\n" +
+                    "        UO.DISPLAY_NAME,\n" +
+                    "        UO.PARENT_ID,\n" +
+                    "        UO.ID\n" +
+                    "    FROM\n" +
+                    "        UM_USER_ROLE_ORG     URO,\n" +
+                    "        UM_HYBRID_ROLE       UHR,\n" +
+                    "        UM_ROLE_PERMISSION   URP,\n" +
+                    "        UM_PERMISSION        UP,\n" +
+                    "        UM_ORG               UO\n" +
+                    "    WHERE\n" +
+                    "        URO.UM_HYBRID_ROLE_ID = UHR.UM_ID (+)\n" +
+                    "        AND UHR.UM_ROLE_NAME = URP.UM_ROLE_NAME (+)\n" +
+                    "        AND URP.UM_PERMISSION_ID = UP.UM_ID (+)\n" +
+                    "        AND URO.ASSIGNED_AT = UO.ID (+)\n" +
+                    "        AND URO.UM_TENANT_ID = ? \n" +
+                    "        AND URO.UM_USER_ID = ? \n" +
+                    "        AND UP.UM_RESOURCE_ID IN (\n" +
+                    "           '/permission/admin',\n" +
+                    "           '/permission/admin/manage',\n" +
+                    "           '/permission/admin/manage/identity', ?, ?" +
+                    ")), ORG_PATHS AS (\n" +
+                    "    SELECT\n" +
+                    "        DISPLAY_NAME,\n" +
+                    "        ID,\n" +
+                    "        SYS_CONNECT_BY_PATH(DISPLAY_NAME, ',') \"PATH\"\n" +
+                    "    FROM\n" +
+                    "        UM_ORG\n" +
+                    "    START WITH\n" +
+                    "        PARENT_ID = (\n" +
+                    "            SELECT\n" +
+                    "                ID\n" +
+                    "            FROM\n" +
+                    "                UM_ORG\n" +
+                    "            WHERE\n" +
+                    "                TENANT_ID = ?\n" +
+                    "                AND DISPLAY_NAME = ? \n" +
+                    "        )\n" +
+                    "    CONNECT BY NOCYCLE\n" +
+                    "        PARENT_ID = PRIOR ID\n" +
+                    "    ORDER SIBLINGS BY\n" +
+                    "        PARENT_ID\n" +
+                    ")\n" +
+                    "SELECT\n" +
+                    "    FPG.INHERIT,\n" +
+                    "    FPG.DISPLAY_NAME,\n" +
+                    "    OP.PATH\n" +
+                    "FROM\n" +
+                    "    FILTERED_PARENT_ORGS FPG,\n" +
+                    "    ORG_PATHS OP\n" +
+                    "WHERE\n" +
+                    "    FPG.ID = OP.ID";
     public static final String GET_LIST_OF_AUTHORIZED_ORGANIZATION_NAMES =
             "SELECT\n" +
             "    DISTINCT NAME\n" +

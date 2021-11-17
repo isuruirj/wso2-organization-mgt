@@ -26,6 +26,7 @@ import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
 import org.wso2.carbon.identity.organization.mgt.core.exception.OrganizationManagementClientException;
 import org.wso2.carbon.identity.organization.mgt.core.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.mgt.core.exception.OrganizationManagementServerException;
+import org.wso2.carbon.identity.organization.mgt.core.model.AuthorizedParentOrganization;
 import org.wso2.carbon.identity.organization.mgt.core.model.OrganizationPermission;
 import org.wso2.carbon.identity.organization.mgt.core.model.OrganizationUserRoleMapping;
 
@@ -52,6 +53,7 @@ import static org.wso2.carbon.identity.organization.mgt.core.constant.Organizati
 import static org.wso2.carbon.identity.organization.mgt.core.constant.OrganizationMgtConstants.USER_ROLE_MGT_DELETE_PERMISSION;
 import static org.wso2.carbon.identity.organization.mgt.core.constant.OrganizationMgtConstants.USER_ROLE_MGT_UPDATE_PERMISSION;
 import static org.wso2.carbon.identity.organization.mgt.core.constant.OrganizationMgtConstants.USER_ROLE_MGT_VIEW_PERMISSION;
+import static org.wso2.carbon.identity.organization.mgt.core.constant.OrganizationMgtConstants.ROOT;
 import static org.wso2.carbon.identity.organization.mgt.core.constant.SQLConstants.ATTR_VALUE_COLUMN;
 import static org.wso2.carbon.identity.organization.mgt.core.constant.SQLConstants.CASCADE_INSERT_INTO_ORGANIZATION_USER_ROLE_MAPPING;
 import static org.wso2.carbon.identity.organization.mgt.core.constant.SQLConstants.COUNT_COLUMN;
@@ -81,6 +83,9 @@ import static org.wso2.carbon.identity.organization.mgt.core.constant.SQLConstan
 import static org.wso2.carbon.identity.organization.mgt.core.constant.SQLConstants.UM_UM_USER_ID_COLUMN;
 import static org.wso2.carbon.identity.organization.mgt.core.constant.SQLConstants.VIEW_NAME_COLUMN;
 import static org.wso2.carbon.identity.organization.mgt.core.constant.SQLConstants.VIEW_ORG_ID_COLUMN;
+import static org.wso2.carbon.identity.organization.mgt.core.constant.SQLConstants.GET_LIST_OF_AUTHORIZED_PARENT_ORGANIZATIONS;
+import static org.wso2.carbon.identity.organization.mgt.core.constant.SQLConstants.VIEW_DISPLAY_NAME_COLUMN;
+import static org.wso2.carbon.identity.organization.mgt.core.constant.SQLConstants.PATH_COLUMN;
 import static org.wso2.carbon.identity.organization.mgt.core.util.Utils.dissemblePermissionString;
 import static org.wso2.carbon.identity.organization.mgt.core.util.Utils.getMaximumQueryLengthInBytes;
 import static org.wso2.carbon.identity.organization.mgt.core.util.Utils.getNewIdentityTemplate;
@@ -366,6 +371,39 @@ public class OrganizationAuthorizationDaoImpl implements OrganizationAuthorizati
                         preparedStatement.setString(++parameterIndex, userId);
                         preparedStatement.setString(++parameterIndex, basePermission);
                         preparedStatement.setString(++parameterIndex, permission);
+                    });
+        } catch (DataAccessException e) {
+            throw handleServerException(ERROR_CODE_RETRIEVING_AUTHORIZED_ORGANIZATION_LIST_ERROR,
+                    "userid : " + userId + ", tenantid : " + tenantId + ", permission : " + permission, e);
+        }
+    }
+
+    @Override
+    public List<AuthorizedParentOrganization> findAuthorizedParentOrganizationsList(String userId, int tenantId, String permission,
+                                                                                    boolean listByNames)
+            throws OrganizationManagementException {
+
+        JdbcTemplate jdbcTemplate = getNewTemplate();
+        String basePermission = permission.contains(USER_MGT_BASE_PERMISSION) ? USER_MGT_BASE_PERMISSION :
+                (permission.contains(ROLE_MGT_BASE_PERMISSION) ? ROLE_MGT_BASE_PERMISSION :
+                        (permission.contains(ORGANIZATION_BASE_PERMISSION) ? ORGANIZATION_BASE_PERMISSION :
+                                permission));
+        try {
+            return jdbcTemplate.executeQuery(GET_LIST_OF_AUTHORIZED_PARENT_ORGANIZATIONS,
+                    (resultSet, rowNumber) ->
+                            new AuthorizedParentOrganization(
+                                    resultSet.getInt(UM_INHERIT_COLUMN),
+                                    resultSet.getString(VIEW_DISPLAY_NAME_COLUMN),
+                                    resultSet.getString(PATH_COLUMN)
+                            ),
+                    preparedStatement -> {
+                        int parameterIndex = 0;
+                        preparedStatement.setInt(++parameterIndex, tenantId);
+                        preparedStatement.setString(++parameterIndex, userId);
+                        preparedStatement.setString(++parameterIndex, basePermission);
+                        preparedStatement.setString(++parameterIndex, permission);
+                        preparedStatement.setInt(++parameterIndex, tenantId);
+                        preparedStatement.setString(++parameterIndex, ROOT);
                     });
         } catch (DataAccessException e) {
             throw handleServerException(ERROR_CODE_RETRIEVING_AUTHORIZED_ORGANIZATION_LIST_ERROR,

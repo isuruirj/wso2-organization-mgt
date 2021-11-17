@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.organization.mgt.core.dao;
 import org.wso2.carbon.database.utils.jdbc.JdbcTemplate;
 import org.wso2.carbon.identity.organization.mgt.core.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.mgt.core.exception.OrganizationManagementServerException;
+import org.wso2.carbon.identity.organization.mgt.core.model.AuthorizedParentOrganization;
 import org.wso2.carbon.identity.organization.mgt.core.model.OrganizationUserRoleMapping;
 
 import java.util.List;
@@ -138,5 +139,18 @@ public interface OrganizationAuthorizationDao {
      * @throws OrganizationManagementException
      */
     List<String> findAuthorizedOrganizationsList(String userId, int tenantId, String permission, boolean listByName)
+            throws OrganizationManagementException;
+
+    /**
+     * Get list of root organization Names,Inherit and search base over which the provided user has the provided permission.
+     *
+     * @param userId
+     * @param tenantId
+     * @param permission
+     * @param listByName
+     * @return
+     * @throws OrganizationManagementException
+     */
+    List<AuthorizedParentOrganization> findAuthorizedParentOrganizationsList(String userId, int tenantId, String permission, boolean listByName)
             throws OrganizationManagementException;
 }
