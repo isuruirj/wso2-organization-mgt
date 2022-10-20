@@ -20,6 +20,8 @@ package org.wso2.carbon.identity.organization.user.role.mgt.core;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
@@ -90,6 +92,8 @@ import static org.wso2.carbon.identity.organization.user.role.mgt.core.util.Util
  * Organization User Role Manager Impl.
  */
 public class OrganizationUserRoleManagerImpl implements OrganizationUserRoleManager {
+
+    private static final Log log = LogFactory.getLog(OrganizationUserRoleManagerImpl.class);
 
     @Override
     public void addOrganizationUserRoleMappings(String organizationId, UserRoleMapping userRoleMapping)
@@ -218,20 +222,19 @@ public class OrganizationUserRoleManagerImpl implements OrganizationUserRoleMana
         List<String> childOrganizationList = cacheBackedOrganizationMgtDAO.
                 getAllCascadedChildOrganizationIds(organizationId);
         int hybridRoleId = getHybridRoleIdFromSCIMGroupId(roleId);
-        for (String childOrg : childOrganizationList) {
-            if (operationValue) {
-                List<UserRoleMappingUser> userRoleMappings = new ArrayList<>();
-                userRoleMappings.add(new UserRoleMappingUser(userId, operationValue));
-                organizationUserRoleMappings
-                        .addAll(populateOrganizationUserRoleMappings(childOrg, roleId, hybridRoleId, organizationId,
-                                userRoleMappings));
-            } else {
+        if (operationValue) {
+            List<UserRoleMappingUser> userRoleMappings = new ArrayList<>();
+            userRoleMappings.add(new UserRoleMappingUser(userId, operationValue));
+            organizationUserRoleMgtDAO.updateIncludeSubOrgPropertyWithSp(organizationId, roleId, userId,
+                    userRoleOperations.get(0).getValue(),userRoleMappings, hybridRoleId, getTenantId());
+        } else {
+            for (String childOrg : childOrganizationList) {
                 organizationListToBeDeleted.add(childOrg);
             }
+            organizationUserRoleMgtDAO
+                    .updateIncludeSubOrgProperty(organizationId, roleId, userId, userRoleOperations.get(0).getValue(),
+                            organizationUserRoleMappings, organizationListToBeDeleted, getTenantId());
         }
-        organizationUserRoleMgtDAO
-                .updateIncludeSubOrgProperty(organizationId, roleId, userId, userRoleOperations.get(0).getValue(),
-                        organizationUserRoleMappings, organizationListToBeDeleted, getTenantId());
     }
 
     @Override

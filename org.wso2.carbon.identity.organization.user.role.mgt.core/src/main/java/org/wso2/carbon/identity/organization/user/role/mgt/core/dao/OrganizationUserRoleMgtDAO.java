@@ -59,6 +59,10 @@ public interface OrganizationUserRoleMgtDAO {
                                      List<String> childOrganizationIdsToDeleteRecords, int tenantID)
             throws OrganizationUserRoleMgtServerException;
 
+    void updateIncludeSubOrgPropertyWithSp(String organizationID, String roleId, String userId, boolean includeSubOrg,
+                                           List<UserRoleMappingUser> userIdList, int hybridRoleId, int tenantID)
+            throws OrganizationUserRoleMgtServerException;
+
     boolean isOrganizationUserRoleMappingExists(String organizationId, String userId, String roleId,
                                                 String assignedLevel, boolean includeSubOrg, boolean checkInheritance,
                                                 int tenantId)

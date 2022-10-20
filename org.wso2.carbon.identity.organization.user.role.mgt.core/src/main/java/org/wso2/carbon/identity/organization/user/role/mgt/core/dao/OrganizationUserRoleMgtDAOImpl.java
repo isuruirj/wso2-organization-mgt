@@ -408,6 +408,39 @@ public class OrganizationUserRoleMgtDAOImpl implements OrganizationUserRoleMgtDA
     }
 
     @Override
+    public void updateIncludeSubOrgPropertyWithSp(String organizationID, String roleId, String userId, boolean includeSubOrg,
+                                                  List<UserRoleMappingUser> userIdList, int hybridRoleId, int tenantId)
+            throws OrganizationUserRoleMgtServerException {
+
+        JdbcTemplate jdbcTemplate = getNewTemplate();
+        try {
+            jdbcTemplate.withTransaction(template -> {
+                // Update the directly updated record
+                template.executeUpdate(UPDATE_ORGANIZATION_USER_ROLE_MAPPING_INHERIT_PROPERTY, preparedStatement -> {
+                    int parameterIndex = 0;
+                    preparedStatement.setInt(++parameterIndex, includeSubOrg ? 1 : 0);
+                    preparedStatement.setString(++parameterIndex, userId);
+                    preparedStatement.setString(++parameterIndex, roleId);
+                    preparedStatement.setString(++parameterIndex, organizationID);
+                    preparedStatement.setString(++parameterIndex, organizationID);
+                    preparedStatement.setInt(++parameterIndex, tenantId);
+                });
+                // If 'includeSubOrg' is true, more entries should be added if child orgs exists.
+                if (includeSubOrg && CollectionUtils.isNotEmpty(userIdList)) {
+                    addOrganizationUserRoleMappingsWithSp(userIdList, roleId, hybridRoleId, tenantId, organizationID);
+                }
+                return null;
+            });
+        } catch (TransactionException e) {
+            String message =
+                    String.format(String.valueOf(ERROR_CODE_ORGANIZATION_USER_ROLE_MAPPINGS_UPDATE_ERROR),
+                            organizationID, userId, roleId);
+            throw new OrganizationUserRoleMgtServerException(message,
+                    ERROR_CODE_ORGANIZATION_USER_ROLE_MAPPINGS_UPDATE_ERROR.getCode(), e);
+        }
+    }
+
+    @Override
     @SuppressFBWarnings("SQL_PREPARED_STATEMENT_GENERATED_FROM_NONCONSTANT_STRING")
     public boolean isOrganizationUserRoleMappingExists(String organizationId, String userId, String roleId,
                                                        String assignedLevel, boolean includeSubOrg,
